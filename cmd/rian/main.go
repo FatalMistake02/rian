@@ -7,7 +7,7 @@ import (
 	"rian/internal/app"
 )
 
-var version = "0.2.1"
+var version = "0.2.2"
 
 func main() {
 	if err := app.Run(os.Args[1:], os.Stdin, os.Stdout, version); err != nil {
