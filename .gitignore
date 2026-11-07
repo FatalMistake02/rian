@@ -1,0 +1,9 @@
+/.cache/
+/bin/*
+!/bin/rian.cjs
+*.exe
+*.test
+/rian
+/dist/
+/node_modules/
+*.tgz

@@ -1,0 +1,78 @@
+{
+  "format_version": 1,
+  "version": "1.0.0",
+  "update_url": "",
+  "id": "your-addon",
+  "name": "Your addon",
+  "description": "",
+  "shortcut": "",
+  "menu": false,
+  "detect": {
+    "files": [],
+    "tools": []
+  },
+  "settings": [
+    {"id": "text", "name": "Text setting", "type": "text", "default": ""},
+    {"id": "number", "name": "Number setting", "type": "number", "default": 0},
+    {"id": "toggle", "name": "Boolean setting", "type": "bool", "default": false},
+    {"id": "choice", "name": "Choice setting", "type": "choice", "default": "option-1", "options": ["option-1", "option-2"]}
+  ],
+  "actions": [
+    {
+      "id": "cli-action",
+      "name": "CLI action",
+      "kind": "cli",
+      "executable": "your-tool",
+      "args": [],
+      "detect": {"files": [], "tools": []}
+    },
+    {
+      "id": "command-action",
+      "name": "Command action",
+      "kind": "command",
+      "executable": "your-tool",
+      "args": [],
+      "detect": {"files": [], "tools": []}
+    },
+    {
+      "id": "app-action",
+      "name": "Application action",
+      "kind": "app",
+      "executable": "your-tool",
+      "args": [],
+      "detect": {"files": [], "tools": []}
+    },
+    {
+      "id": "output-action",
+      "name": "Output action",
+      "kind": "output",
+      "executable": "your-tool",
+      "args": [],
+      "detect": {"files": [], "tools": []}
+    },
+    {
+      "id": "url-action",
+      "name": "URL action",
+      "kind": "url",
+      "url": "https://example.com",
+      "detect": {"files": [], "tools": []}
+    }
+  ],
+  "pages": [
+    {
+      "id": "your-page",
+      "name": "Your page",
+      "title": "",
+      "text": "",
+      "detect": {"files": [], "tools": []},
+      "actions": ["cli-action", "command-action", "app-action", "output-action", "url-action"],
+      "sections": [
+        {
+          "title": "",
+          "text": "",
+          "actions": ["cli-action", "command-action", "app-action", "output-action", "url-action"]
+        }
+      ]
+    }
+  ]
+}

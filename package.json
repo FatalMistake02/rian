@@ -1,0 +1,64 @@
+{
+  "name": "@fatalmistake02/rian",
+  "version": "0.2.1",
+  "description": "Rian: your local project desk. A keyboard-first terminal app for Git, coding tools, and project commands.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/FatalMistake02/rian.git"
+  },
+  "bin": {
+    "rian": "bin/rian.cjs"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "os": [
+    "darwin",
+    "linux",
+    "win32"
+  ],
+  "cpu": [
+    "arm64",
+    "x64"
+  ],
+  "files": [
+    "bin/rian.cjs",
+    "lib/",
+    "dist/binaries/",
+    "cmd/",
+    "internal/",
+    "examples/addons/",
+    "docs/",
+    "go.mod",
+    "go.sum",
+    "scripts/",
+    "test/npm/",
+    "README.md",
+    "LICENSE",
+    "THIRD_PARTY_NOTICES.txt"
+  ],
+  "scripts": {
+    "build": "node scripts/build-binaries.cjs",
+    "test": "node --test test/npm/build.test.cjs test/npm/launcher.test.cjs test/npm/release.test.cjs",
+    "test:package": "node --test test/npm/package.test.cjs",
+    "test:install": "node scripts/check-install.cjs",
+    "check:package": "node scripts/check-package.cjs",
+    "postinstall": "node scripts/ensure-binary.cjs",
+    "prepack": "npm run check:package",
+    "prepublishOnly": "npm test && npm run test:package"
+  },
+  "keywords": [
+    "rian",
+    "tui",
+    "terminal",
+    "projects",
+    "git",
+    "developer-tools",
+    "bubbletea"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  }
+}

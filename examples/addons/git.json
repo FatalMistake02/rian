@@ -1,0 +1,142 @@
+{
+  "format_version": 1,
+  "version": "1.0.0",
+  "id": "git",
+  "name": "Git",
+  "description": "Git workflows implemented with addon actions",
+  "menu": true,
+  "detect": {
+    "tools": ["git"]
+  },
+  "settings": [
+    {
+      "id": "history-limit",
+      "name": "History limit",
+      "type": "number",
+      "default": 20
+    },
+    {
+      "id": "branch",
+      "name": "Switch to branch",
+      "type": "text",
+      "default": "main"
+    },
+    {
+      "id": "new-branch",
+      "name": "New branch",
+      "type": "text",
+      "default": "feature/example"
+    }
+  ],
+  "actions": [
+    {
+      "id": "init",
+      "name": "Initialize repository",
+      "kind": "cli",
+      "executable": "git",
+      "args": ["init"]
+    },
+    {
+      "id": "status",
+      "name": "Status",
+      "kind": "cli",
+      "executable": "git",
+      "args": ["--no-pager", "status", "--short", "--branch"],
+      "detect": {"files": [".git"]}
+    },
+    {
+      "id": "history",
+      "name": "Recent commits",
+      "kind": "cli",
+      "executable": "git",
+      "args": ["--no-pager", "log", "--oneline", "--decorate", "-n", "${setting.history-limit}"],
+      "detect": {"files": [".git"]}
+    },
+    {
+      "id": "diff",
+      "name": "Unstaged changes",
+      "kind": "cli",
+      "executable": "git",
+      "args": ["--no-pager", "diff", "--"],
+      "detect": {"files": [".git"]}
+    },
+    {
+      "id": "stage-all",
+      "name": "Stage all changes",
+      "kind": "cli",
+      "executable": "git",
+      "args": ["add", "--all"],
+      "detect": {"files": [".git"]}
+    },
+    {
+      "id": "commit",
+      "name": "Commit staged changes",
+      "kind": "cli",
+      "executable": "git",
+      "args": ["commit"],
+      "detect": {"files": [".git"]}
+    },
+    {
+      "id": "fetch",
+      "name": "Fetch all remotes",
+      "kind": "cli",
+      "executable": "git",
+      "args": ["fetch", "--all"],
+      "detect": {"files": [".git"]}
+    },
+    {
+      "id": "pull",
+      "name": "Pull fast-forward only",
+      "kind": "cli",
+      "executable": "git",
+      "args": ["pull", "--ff-only"],
+      "detect": {"files": [".git"]}
+    },
+    {
+      "id": "push",
+      "name": "Push",
+      "kind": "cli",
+      "executable": "git",
+      "args": ["push"],
+      "detect": {"files": [".git"]}
+    },
+    {
+      "id": "switch",
+      "name": "Switch branch",
+      "kind": "cli",
+      "executable": "git",
+      "args": ["switch", "--", "${setting.branch}"],
+      "detect": {"files": [".git"]}
+    },
+    {
+      "id": "create-branch",
+      "name": "Create and switch branch",
+      "kind": "cli",
+      "executable": "git",
+      "args": ["switch", "-c", "${setting.new-branch}"],
+      "detect": {"files": [".git"]}
+    },
+    {
+      "id": "lazygit",
+      "name": "lazygit",
+      "kind": "cli",
+      "executable": "lazygit",
+      "detect": {"files": [".git"], "tools": ["lazygit"]}
+    }
+  ],
+  "pages": [
+    {
+      "id": "repositories",
+      "name": "Git",
+      "title": "Git repositories",
+      "text": "Git commands for saved projects. History limit: ${setting.history-limit}.",
+      "sections": [
+        {"title": "Repository", "actions": ["init", "lazygit"]},
+        {"title": "Working tree", "actions": ["status", "diff", "stage-all", "commit"]},
+        {"title": "History", "actions": ["history"]},
+        {"title": "Sync", "actions": ["fetch", "pull", "push"]},
+        {"title": "Branches", "actions": ["switch", "create-branch"]}
+      ]
+    }
+  ]
+}

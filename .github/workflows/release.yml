@@ -1,0 +1,71 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: read
+
+# Run one release at a time without cancelling an in-progress publish.
+concurrency:
+  group: npm-release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          registry-url: https://registry.npmjs.org
+          package-manager-cache: false
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: false
+      - name: Set version from tag
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: node scripts/release-version.cjs "$RELEASE_TAG"
+      - name: Test Go and release tooling
+        run: |
+          go test ./...
+          go vet ./...
+          node --test test/npm/release.test.cjs
+      - name: Build all six platforms
+        run: npm run build
+      - name: Test package
+        run: |
+          npm test
+          npm run test:package
+      - name: Pack tested release
+        run: |
+          mkdir -p dist/release
+          npm pack --pack-destination dist/release
+          cd dist/release
+          sha256sum ./*.tgz > SHA256SUMS
+      - name: Test packed installation
+        run: npm run test:install -- dist/release/*.tgz
+      - name: Publish to npm with trusted publishing
+        run: npm publish dist/release/*.tgz --access public
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          if gh release view "$RELEASE_TAG" > /dev/null 2>&1; then
+            gh release upload "$RELEASE_TAG" dist/release/* --clobber
+          else
+            gh release create "$RELEASE_TAG" dist/release/* --verify-tag --generate-notes --title "Rian $RELEASE_TAG"
+          fi
