@@ -101,6 +101,7 @@ A manifest is one JSON object, at most 1 MiB. Unknown fields are rejected.
 | `detect` | Optional requirements shared by actions. |
 | `settings` | Up to 100 setting definitions. |
 | `actions`, `pages` | At least one is required; limits are 100 actions and 50 pages. |
+| `metadata` | Optional live JSON data source and display templates (see below). |
 
 IDs match `[a-z][a-z0-9-]{0,63}`. Keep the addon ID stable across versions. Action, setting, and page IDs must be unique within their respective arrays.
 
@@ -115,6 +116,7 @@ Each action requires `id`, `name`, and `kind`. Process actions use an `executabl
 | `app` | Starts an application without waiting for it to close. |
 | `output` | Captures noninteractive output inside Rian; closes on success and retains failures. |
 | `url` | Opens an HTTP(S) link. |
+| `metadata-url` | Opens the link returned by this addon's metadata rules; requires `metadata` and no `url`, `executable`, or `args`. |
 
 ## Detection
 
@@ -132,7 +134,38 @@ Arguments and URLs support `${project.path}`, `${project.name}`, and `${setting.
 
 Pages require `id` and `name`; `title`, `text`, `detect`, `actions`, and `sections` are optional. Sections accept `title`, `text`, and `actions`. Action lists reference IDs from the same manifest. An omitted or empty list uses all available actions. Choose a top-level `actions` list or `sections`: sections take precedence when both exist.
 
-Page and section `text` support setting templates. Project templates belong in actions, which carry each row's project context. Pages contain static text and action rows, not live command output or custom widgets. Viewing a page never executes actions, and a page can remain visible without matching projects. Text-only addons can omit `actions`.
+Page and section `text` support setting templates. Project templates belong in actions, which carry each row's project context. Pages contain static text and action rows; addons with `metadata` also display live project summaries. Viewing a page never executes actions, and a page can remain visible without matching projects. Text-only addons can omit `actions`.
+
+## Live JSON metadata
+
+An addon can read one project-relative JSON `file`, GET JSON from a fixed HTTP(S) `fetch` URL, or combine both. At least one source is required. All service-specific URLs, field mappings, and conditions stay in the addon file. No executable or project script runs. Metadata is fetched in the background only for enabled, visible addons whose detection matches, at startup and every five minutes. Up to four checks run at once, requests time out after eight seconds, and local/remote JSON is limited to 1 MiB each. Ctrl+R on a focused addon page refreshes metadata; rescanning a project invalidates its cached data.
+
+```json
+"metadata": {
+  "file": "app.json",
+  "fetch": "https://example.com/releases/${file.name}",
+  "fetch_when": [{"path": "file.private", "op": "ne", "value": "true"}],
+  "hidden_when": [{"path": "file.name", "op": "empty"}],
+  "title": "RELEASE",
+  "name": "${file.name}",
+  "summary": "local ${file.version} / published ${remote.version}",
+  "status": "Published",
+  "statuses": [{"when": [{"path": "request.status", "op": "eq", "value": "404"}], "text": "Not published"}],
+  "url": "https://example.com/projects/${file.name}",
+  "url_when": [{"path": "request.status", "op": "eq", "value": "200"}],
+  "fields": [{"label": "Local", "value": "${file.version}"}, {"label": "Published", "value": "${remote.version}"}]
+}
+```
+
+Templates access scalar dotted paths under `file` and `remote`, plus `project.name`, `request.status`, `request.error`, and the resolved `status`. Arrays use numeric segments, for example `${remote.items.0.title}` or `${remote.0.title}`. Missing or nonscalar values expand to empty strings. URL substitutions are encoded as path segments; `${file.name|path}` preserves slashes between separately encoded segments. Schemes and hosts must be literal, and credentials are unsupported. Only `200` responses populate `remote`; `404` is available as a distinct status, while other HTTP errors, network failures, and malformed JSON populate `request.error`.
+
+Conditions use `path` and `op`: `empty`, `present`, `eq`, `ne`, or `in`. Equality operations use `value`, which can contain templates; `in` uses a string array `values`. All conditions in a list must match; an empty list matches. `hidden_when` is ignored when omitted or empty. The first matching status rule wins; otherwise `status` supplies the default. Up to 20 fields, 20 status rules, and 100 conditions are supported. Empty field values are omitted.
+
+Optional `visible_when` conditions run after fetching, so an addon can include only confirmed remote records. When present and nonempty, all conditions must match; unmatched records are hidden from overview rows, project details, and addon shortcuts. Pending records are hidden until checked, preventing unrelated projects from briefly appearing during discovery. Overview rows follow saved-project order: favorites, most recently used, then project name.
+
+Set `filter_setting` to the ID of an addon boolean setting to let users toggle `visible_when` filtering. A `true` value applies the filter; `false` shows all candidates. The setting's default controls its initial state. File detection and `hidden_when` still apply in both modes.
+
+Metadata appears in project details and in two-line overview rows. A `metadata-url` action opens the resulting `url` if its conditions match. Addon shortcuts also work on the selected row of a focused overview page. A missing link displays a notice.
 
 ## Test and import
 

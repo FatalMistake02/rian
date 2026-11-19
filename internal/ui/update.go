@@ -13,6 +13,11 @@ import (
 
 func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
+	case addonMetadataMsg:
+		if state, ok := m.addonMetadata[msg.key]; ok && state.fingerprint == msg.fingerprint {
+			state.data, state.err, state.checked, state.loading = msg.data, msg.err, time.Now(), false
+			m.addonMetadata[msg.key] = state
+		}
 	case addonUpdatesMsg:
 		return m, m.acceptAddonUpdates(msg)
 	case addonUpdatedMsg:
@@ -42,7 +47,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.overviewFocused = false
 		m.projectFull, m.graphFocused = false, false
 		m.openStartupProject()
-		cmds := []tea.Cmd{m.scanAutoAdd(), m.checkAddonUpdates()}
+		cmds := []tea.Cmd{m.scanAutoAdd(), m.checkAddonUpdates(), m.refreshAddonMetadata()}
 		// Initial badges are loaded in small parallel batches; subsequent polls
 		// inspect only the active project.
 		for i, p := range m.cfg.Projects {
@@ -233,7 +238,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	case tickMsg:
 		m.autoAddBlink = !m.autoAddBlink
-		cmds := []tea.Cmd{tick(), m.scanAutoAdd(), m.checkAddonUpdates()}
+		cmds := []tea.Cmd{tick(), m.scanAutoAdd(), m.checkAddonUpdates(), m.refreshAddonMetadata()}
 		if m.mode == gitOutput && m.gitRunning && m.gitJobStarted {
 			cmds = append(cmds, m.gitProgress(gitRunMsg{job: m.gitJobID, state: m.manager.Snapshot(m.gitJobID)}))
 		}

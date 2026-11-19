@@ -299,6 +299,7 @@ func (m *Model) detailView(width, height int) string {
 	label := func(name, value string) string {
 		return muted.Render(pad(name, min(14, width/3))) + textStyle.Render(fit(oneLine(value), max(1, width-min(14, width/3))))
 	}
+	lines = append(lines, m.addonMetadataDetails(p, width)...)
 	repo := p.GitHub
 	if repo == "" {
 		repo = s.GitHub

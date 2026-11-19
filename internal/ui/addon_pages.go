@@ -61,6 +61,12 @@ func (m *Model) addonPageActions(page addonOverviewPage) []addonPageAction {
 				continue
 			}
 			available := page.item.Actions(p)
+			if page.item.Definition.Metadata != nil {
+				data, status := m.metadataFor(page.addonID, p)
+				if data.Hidden || status != "" && page.item.FilterMetadata() {
+					continue
+				}
+			}
 			// An omitted action list uses all available actions in manifest order.
 			refs := section.Actions
 			if len(refs) == 0 {
@@ -87,7 +93,19 @@ func (m *Model) addonPageKey(key string) (bool, tea.Cmd) {
 	}
 	rows := m.addonPageActions(page)
 	m.overviewAlertIndex = min(m.overviewAlertIndex, max(0, len(rows)-1))
+	if addonShortcutMatches(m.addonKey(page.addonID), key) {
+		if len(rows) > 0 {
+			row := rows[m.overviewAlertIndex]
+			return true, m.executeAddon(row.action, row.project)
+		}
+		return true, nil
+	}
 	switch key {
+	case "ctrl+r":
+		if page.item.Definition.Metadata != nil {
+			m.invalidateAddonMetadata("")
+			return true, m.refreshAddonMetadata()
+		}
 	case "left", "esc", "tab", "shift+tab":
 		m.overviewFocused = false
 	case "up", "j":
@@ -116,6 +134,13 @@ func (m *Model) addonPageView(page addonOverviewPage, width, height int) string 
 		title = page.page.Name
 	}
 	lines := []string{titleStyle.Render(oneLine(title)), ""}
+	if key := m.addonKey(page.addonID); key != "" {
+		label := "run selected action"
+		if page.item.Definition.Metadata != nil {
+			label = "open selected link"
+		}
+		lines = append(lines, keyHint(key, label), "")
+	}
 	expand := func(value string) string { return plain(page.item.Expand(value, project.Project{})) }
 	if page.page.Text != "" {
 		lines = append(lines, strings.Split(expand(page.page.Text), "\n")...)
@@ -138,7 +163,11 @@ func (m *Model) addonPageView(page addonOverviewPage, width, height int) string 
 	} else if len(rows) > 0 {
 		// Descriptions must leave room for keyboard selection. Reserve up to
 		// half the page for actions, and mark any clipped introductory text.
-		actionHeight := min(len(rows), max(1, height/2))
+		rowHeight := 1
+		if page.item.Definition.Metadata != nil {
+			rowHeight = 2
+		}
+		actionHeight := min(len(rows)*rowHeight, max(rowHeight, height/2))
 		introHeight := max(0, height-actionHeight)
 		if len(lines) > introHeight {
 			lines = lines[:introHeight]
@@ -146,7 +175,7 @@ func (m *Model) addonPageView(page addonOverviewPage, width, height int) string 
 				lines[introHeight-1] = muted.Render("…")
 			}
 		}
-		count := max(1, height-len(lines))
+		count := max(1, (height-len(lines))/rowHeight)
 		selected := min(m.overviewAlertIndex, len(rows)-1)
 		start := max(0, selected-count+1)
 		for idx := start; idx < min(len(rows), start+count); idx++ {
@@ -156,6 +185,15 @@ func (m *Model) addonPageView(page addonOverviewPage, width, height int) string 
 				prefix = "› "
 			}
 			label := prefix + oneLine(row.project.Name) + " / " + oneLine(row.action.Label)
+			detail := ""
+			if page.item.Definition.Metadata != nil {
+				data, status := m.metadataFor(page.addonID, row.project)
+				label = prefix + oneLine(data.Name)
+				detail = "  " + oneLine(data.Summary)
+				if status != "" {
+					detail = "  " + status
+				}
+			}
 			if row.section != "" {
 				label = prefix + oneLine(row.section) + " / " + oneLine(row.project.Name) + " / " + oneLine(row.action.Label)
 			}
@@ -164,6 +202,15 @@ func (m *Model) addonPageView(page addonOverviewPage, width, height int) string 
 				line = selectedStyle.Render(line)
 			}
 			lines = append(lines, line)
+			if rowHeight == 2 {
+				line = pad(detail, width)
+				if m.overviewFocused && idx == selected {
+					line = selectedStyle.Render(line)
+				} else {
+					line = muted.Render(line)
+				}
+				lines = append(lines, line)
+			}
 		}
 	}
 	for idx := range lines {

@@ -54,18 +54,19 @@ type Page struct {
 	Sections []PageSection `json:"sections,omitempty"`
 }
 type Definition struct {
-	Pages         []Page    `json:"pages,omitempty"`
-	Menu          bool      `json:"menu,omitempty"`
-	FormatVersion int       `json:"format_version"`
-	Version       string    `json:"version"`
-	UpdateURL     string    `json:"update_url,omitempty"`
-	ID            string    `json:"id"`
-	Name          string    `json:"name"`
-	Description   string    `json:"description,omitempty"`
-	Shortcut      string    `json:"shortcut,omitempty"`
-	Detect        Detection `json:"detect,omitempty"`
-	Settings      []Setting `json:"settings,omitempty"`
-	Actions       []Action  `json:"actions"`
+	Pages         []Page            `json:"pages,omitempty"`
+	Menu          bool              `json:"menu,omitempty"`
+	FormatVersion int               `json:"format_version"`
+	Version       string            `json:"version"`
+	UpdateURL     string            `json:"update_url,omitempty"`
+	ID            string            `json:"id"`
+	Name          string            `json:"name"`
+	Description   string            `json:"description,omitempty"`
+	Metadata      *MetadataProvider `json:"metadata,omitempty"`
+	Shortcut      string            `json:"shortcut,omitempty"`
+	Detect        Detection         `json:"detect,omitempty"`
+	Settings      []Setting         `json:"settings,omitempty"`
+	Actions       []Action          `json:"actions"`
 }
 type Installed struct {
 	Definition Definition        `json:"definition"`
@@ -167,6 +168,11 @@ func (d Definition) Validate() error {
 		}
 	}
 	ids = map[string]bool{}
+	if d.Metadata != nil {
+		if err := d.Metadata.Validate(d.Settings); err != nil {
+			return err
+		}
+	}
 	for _, a := range d.Actions {
 		if !identifier.MatchString(a.ID) || a.Name == "" || ids[a.ID] {
 			return fmt.Errorf("invalid or duplicate action %q", a.ID)
@@ -176,6 +182,10 @@ func (d Definition) Validate() error {
 			return err
 		}
 		switch a.Kind {
+		case "metadata-url":
+			if d.Metadata == nil || a.URL != "" || a.Executable != "" || len(a.Args) > 0 {
+				return fmt.Errorf("metadata-url action requires a metadata provider and no URL or command")
+			}
 		case "url":
 			if a.URL == "" || a.Executable != "" || len(a.Args) > 0 {
 				return fmt.Errorf("URL action requires only url")

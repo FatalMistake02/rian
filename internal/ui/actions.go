@@ -229,6 +229,7 @@ func (m *Model) execute(action Action) tea.Cmd {
 		m.mode = removeConfirm
 		return nil
 	case "refresh":
+		m.invalidateAddonMetadata(p.ID)
 		return m.inspectDirectory("refresh", p.Path, p.ID)
 	case "process":
 		m.showProcess(p.ID)

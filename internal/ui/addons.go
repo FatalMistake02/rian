@@ -305,8 +305,19 @@ func (m *Model) addonActions(p project.Project) []Action {
 	items := []Action{}
 	for _, id := range addon.IDs(m.cfg.Settings.Addons) {
 		item := m.cfg.Settings.Addons[id]
-		if len(item.Actions(p)) > 0 && m.shownFor(p, "addon/"+id) {
-			items = append(items, Action{ID: "addon/" + id, Label: item.Definition.Name, Detail: item.Definition.Description})
+		if item.Definition.Metadata != nil {
+			data, status := m.metadataFor(id, p)
+			if data.Hidden || status != "" && item.FilterMetadata() {
+				continue
+			}
+		}
+		actions := item.Actions(p)
+		if len(actions) > 0 && m.shownFor(p, "addon/"+id) {
+			label := item.Definition.Name
+			if len(actions) == 1 && !item.Definition.Menu {
+				label = actions[0].Name
+			}
+			items = append(items, Action{ID: "addon/" + id, Label: label, Detail: item.Definition.Description})
 		}
 	}
 	return items
@@ -333,11 +344,15 @@ func (m *Model) addonShortcut(key string) (bool, tea.Cmd) {
 		return false, nil
 	}
 	for _, a := range m.addonActions(p) {
-		if m.addonKey(strings.TrimPrefix(a.ID, "addon/")) == key {
+		shortcut := m.addonKey(strings.TrimPrefix(a.ID, "addon/"))
+		if addonShortcutMatches(shortcut, key) {
 			return true, m.executeAddon(a, p)
 		}
 	}
 	return false, nil
+}
+func addonShortcutMatches(shortcut, key string) bool {
+	return shortcut != "" && (shortcut == key || shortcut == strings.ToUpper(shortcut) && key == "shift+"+strings.ToLower(shortcut))
 }
 func (m *Model) executeAddon(a Action, p project.Project) tea.Cmd {
 	parts := strings.Split(a.ID, "/")
@@ -375,6 +390,18 @@ func (m *Model) executeAddon(a Action, p project.Project) tea.Cmd {
 		m.closeModal()
 		prepare := func() (*exec.Cmd, error) { return item.Command(act, p) }
 		switch act.Kind {
+		case "metadata-url":
+			data, status := m.metadataFor(id, p)
+			if status != "" {
+				return m.notify(status, nil)
+			}
+			if data.URL == "" {
+				return m.notify("No link available", nil)
+			}
+			launcher := m.launcher
+			return func() tea.Msg {
+				return actionMsg{id: p.ID, notice: act.Name + " opened", err: launcher.OpenURL(data.URL)}
+			}
 		case "url":
 			return func() tea.Msg {
 				err := m.launcher.OpenURL(item.Expand(act.URL, p))

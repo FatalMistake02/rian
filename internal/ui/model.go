@@ -65,6 +65,7 @@ type formField struct {
 }
 
 type Model struct {
+	addonMetadata                                      map[string]addonMetadataState
 	version, latestRelease                             string
 	updating                                           bool
 	addonUpdatesAvailable                              map[string]addonUpdate
