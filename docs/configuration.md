@@ -16,6 +16,8 @@ Run `rian config` to find your config file.
 
 Settings covers appearance, startup behavior, terminal preferences, tool and command visibility, folder discovery, and addons. Projects can override global shortcut and command visibility.
 
+Open **Settings → section order** to rearrange project details. Select a section with ↑/↓, then use ←/→ or Ctrl+↑/↓ to move it up or down. Each metadata addon has its own movable section alongside the tech stack, GitHub, Git status, last commit, and commands. Changes preview immediately; Ctrl+S saves, Ctrl+C cancels, and Backspace restores the default order. This order applies across projects. Project name/path, shortcut hints, and the separate Git graph and notes panels keep their positions. Newly installed addon sections are appended to a saved order.
+
 ## Detection and commands
 
 Rian detects Node.js, Go, Rust, Python, and Flutter projects from their root manifests. A declared package manager takes priority over lockfiles. Custom commands override detected commands by name.

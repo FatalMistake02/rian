@@ -44,7 +44,7 @@ func (m *Model) startSettings() {
 
 func (m *Model) buildSettingsRows() {
 	m.settingsRows = nil
-	for _, name := range []string{"appearance", "behavior", "shortcuts", "project settings", "addons"} {
+	for _, name := range []string{"appearance", "section order", "behavior", "shortcuts", "project settings", "addons"} {
 		m.settingsRows = append(m.settingsRows, settingRow{id: name, label: name, page: true})
 	}
 	m.settingsRows = append(m.settingsRows, settingRow{id: "accent", label: "Accent color", section: "appearance"}, settingRow{id: "startup", label: "Default opening page", section: "behavior"}, settingRow{id: "project-startup", label: "When launched from a project", section: "behavior"})
@@ -71,6 +71,9 @@ func (m *Model) buildSettingsRows() {
 		settingRow{id: "auto-add-location", label: "Location", section: "behavior/auto add"},
 		settingRow{id: "auto-add-hidden", label: "Include hidden folders", section: "behavior/auto add"})
 	m.addonSettingsRows()
+	for _, section := range m.settingsDraft.ProjectSections() {
+		m.settingsRows = append(m.settingsRows, settingRow{id: section.ID, label: section.Name, section: "section order", operation: "section-order"})
+	}
 }
 
 func (m *Model) settingsPath(page string) string {
@@ -163,6 +166,14 @@ func (m *Model) settingsInput(msg tea.KeyPressMsg) tea.Cmd {
 }
 func (m *Model) settingsKey(key string) tea.Cmd {
 	rows := m.settingsMatches()
+	if len(rows) > 0 && rows[min(m.settingsIndex, len(rows)-1)].operation == "section-order" && (key == "ctrl+up" || key == "ctrl+down") {
+		step := -1
+		if key == "ctrl+down" {
+			step = 1
+		}
+		m.moveProjectSection(rows[min(m.settingsIndex, len(rows)-1)].id, step)
+		return nil
+	}
 	switch key {
 	case "/":
 		m.settingsSearching = true
@@ -200,6 +211,13 @@ func (m *Model) settingsKey(key string) tea.Cmd {
 	case "down", "k", "tab":
 		m.settingsIndex = min(max(0, len(rows)-1), m.settingsIndex+1)
 	case "backspace":
+		if m.settingsPage == "section order" {
+			m.settingsDraft.ProjectSectionOrder = nil
+			m.applySettingsChange()
+			m.buildSettingsRows()
+			m.settingsIndex = 0
+			return nil
+		}
 		if len(rows) > 0 {
 			row := rows[min(m.settingsIndex, len(rows)-1)]
 			if row.projectID != "" && !row.page {
@@ -231,6 +249,15 @@ func (m *Model) settingsKey(key string) tea.Cmd {
 			}
 			m.applySettingsChange()
 			return m.scanAutoAdd()
+		}
+		if row.operation == "section-order" {
+			if key == "left" {
+				m.moveProjectSection(row.id, -1)
+			}
+			if key == "right" {
+				m.moveProjectSection(row.id, 1)
+			}
+			return nil
 		}
 		if row.operation != "" {
 			return m.changeAddonSetting(row, key)
@@ -355,6 +382,14 @@ func launchLabel(mode string) string {
 	}
 }
 func (m *Model) settingValue(row settingRow) string {
+	if row.operation == "section-order" {
+		sections := m.settingsDraft.ProjectSections()
+		for i, section := range sections {
+			if section.ID == row.id {
+				return fmt.Sprintf("%d of %d", i+1, len(sections))
+			}
+		}
+	}
 	if row.id == "auto-add-location" {
 		if m.settingsDraft.AutoAddLocation == "" {
 			return "Not set"
@@ -432,6 +467,9 @@ func (m *Model) settingsHeader(width int) string {
 	return fit(title, width)
 }
 func (m *Model) settingsFooter() string {
+	if m.settingsPage == "section order" {
+		return keyHint("Esc", "back") + "  " + keyHint("↑↓", "choose") + "\n" + keyHint("←/→ or Ctrl+↑/↓", "move up/down") + "\n" + keyHint("⌫", "reset order") + "  " + keyHint("Ctrl+S", "save") + "  " + keyHint("Ctrl+C", "cancel")
+	}
 	middle := keyHint("/", "search")
 	if strings.HasPrefix(m.settingsPage, "project settings/") {
 		middle += "  " + keyHint("⌫", "reset")

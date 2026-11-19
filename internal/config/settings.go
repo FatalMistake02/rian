@@ -6,18 +6,19 @@ import (
 )
 
 type Settings struct {
-	AutoAddEnabled     bool                       `json:"auto_add_enabled,omitempty"`
-	AutoAddLocation    string                     `json:"auto_add_location,omitempty"`
-	AutoAddHidden      bool                       `json:"auto_add_hidden,omitempty"`
-	Addons             map[string]addon.Installed `json:"addons,omitempty"`
-	GraphScope         string                     `json:"git_graph_scope,omitempty"`
-	ProjectOpening     string                     `json:"project_opening,omitempty"`
-	DefaultPage        string                     `json:"default_page,omitempty"`
-	OpenProjectOnStart *bool                      `json:"open_project_on_start,omitempty"`
-	Overrides          map[string]map[string]bool `json:"project_overrides,omitempty"`
-	Accent             string                     `json:"accent,omitempty"`
-	Hidden             map[string]bool            `json:"hidden,omitempty"`
-	Launch             map[string]string          `json:"launch,omitempty"`
+	ProjectSectionOrder []string                   `json:"project_section_order,omitempty"`
+	AutoAddEnabled      bool                       `json:"auto_add_enabled,omitempty"`
+	AutoAddLocation     string                     `json:"auto_add_location,omitempty"`
+	AutoAddHidden       bool                       `json:"auto_add_hidden,omitempty"`
+	Addons              map[string]addon.Installed `json:"addons,omitempty"`
+	GraphScope          string                     `json:"git_graph_scope,omitempty"`
+	ProjectOpening      string                     `json:"project_opening,omitempty"`
+	DefaultPage         string                     `json:"default_page,omitempty"`
+	OpenProjectOnStart  *bool                      `json:"open_project_on_start,omitempty"`
+	Overrides           map[string]map[string]bool `json:"project_overrides,omitempty"`
+	Accent              string                     `json:"accent,omitempty"`
+	Hidden              map[string]bool            `json:"hidden,omitempty"`
+	Launch              map[string]string          `json:"launch,omitempty"`
 }
 
 func (s Settings) Shown(id string) bool { return !s.Hidden[id] }
@@ -30,6 +31,7 @@ func (s Settings) LaunchMode(id string) string {
 func CommandKey(projectID, name string) string { return "command/" + projectID + "/" + name }
 func (s Settings) Clone() Settings {
 	copy := Settings{AutoAddEnabled: s.AutoAddEnabled, AutoAddLocation: s.AutoAddLocation, AutoAddHidden: s.AutoAddHidden, GraphScope: s.GraphScope, ProjectOpening: s.ProjectOpening, DefaultPage: s.DefaultPage, Accent: s.Accent, Overrides: map[string]map[string]bool{}, Hidden: map[string]bool{}, Launch: map[string]string{}}
+	copy.ProjectSectionOrder = append([]string(nil), s.ProjectSectionOrder...)
 	if s.OpenProjectOnStart != nil {
 		value := *s.OpenProjectOnStart
 		copy.OpenProjectOnStart = &value
@@ -56,6 +58,14 @@ func (s Settings) Clone() Settings {
 	return copy
 }
 func (s Settings) validate() error {
+	seenSections := map[string]bool{}
+	for _, id := range s.ProjectSectionOrder {
+		valid := id == "stack" || id == "github" || id == "git" || id == "commit" || id == "commands" || addonSectionID.MatchString(id)
+		if !valid || seenSections[id] {
+			return fmt.Errorf("invalid or duplicate project section %q", id)
+		}
+		seenSections[id] = true
+	}
 	for id, item := range s.Addons {
 		if id != item.Definition.ID {
 			return fmt.Errorf("add-on id mismatch")

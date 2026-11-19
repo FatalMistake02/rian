@@ -530,7 +530,7 @@ func TestSettingsPagesAndContextualSearch(t *testing.T) {
 	m := fixture(t)
 	m.startSettings()
 	roots := m.settingsMatches()
-	if len(roots) != 5 {
+	if len(roots) != 6 {
 		t.Fatalf("unexpected settings pages: %+v", roots)
 	}
 	for _, row := range roots {

@@ -102,35 +102,31 @@ func (m *Model) invalidateAddonMetadata(projectID string) {
 		}
 	}
 }
-func (m *Model) addonMetadataDetails(p project.Project, width int) []string {
-	lines := []string{}
-	for _, id := range addon.IDs(m.cfg.Settings.Addons) {
-		item := m.cfg.Settings.Addons[id]
-		if !m.metadataEnabled(id, item, p) {
-			continue
-		}
-		data, status := m.metadataFor(id, p)
-		if data.Hidden || status != "" && item.FilterMetadata() {
-			continue
-		}
-		title := data.Title
-		if title == "" {
-			title = item.Definition.Name
-		}
-		lines = append(lines, highlight.Render(fit(oneLine(title), width)))
-		if data.Name != "" {
-			lines = append(lines, fit(oneLine(data.Name), width))
-		}
-		if status == "" {
-			status = data.Status
-		}
-		for _, field := range data.Fields {
-			lines = append(lines, muted.Render(fit(oneLine(field.Label)+" · "+oneLine(field.Value), width)))
-		}
-		if status != "" {
-			lines = append(lines, muted.Render(fit(oneLine(status), width)))
-		}
-		lines = append(lines, "")
+func (m *Model) addonMetadataDetail(id string, p project.Project, width int) []string {
+	item, ok := m.cfg.Settings.Addons[id]
+	if !ok || !m.metadataEnabled(id, item, p) {
+		return nil
 	}
-	return lines
+	data, status := m.metadataFor(id, p)
+	if data.Hidden || status != "" && item.FilterMetadata() {
+		return nil
+	}
+	title := data.Title
+	if title == "" {
+		title = item.Definition.Name
+	}
+	lines := []string{highlight.Render(fit(oneLine(title), width))}
+	if data.Name != "" {
+		lines = append(lines, fit(oneLine(data.Name), width))
+	}
+	if status == "" {
+		status = data.Status
+	}
+	for _, field := range data.Fields {
+		lines = append(lines, muted.Render(fit(oneLine(field.Label)+" · "+oneLine(field.Value), width)))
+	}
+	if status != "" {
+		lines = append(lines, muted.Render(fit(oneLine(status), width)))
+	}
+	return append(lines, "")
 }

@@ -291,52 +291,8 @@ func (m *Model) detailView(width, height int) string {
 	if !ok {
 		return strings.Join([]string{titleStyle.Render("READY WHEN YOU ARE"), "", "", highlight.Render("Local projects. Less friction."), "", fit(muted.Render("Open your editor, coding tools, and commands"), width), fit(muted.Render("from one keyboard-first workspace."), width), "", keyHint("a", "add a project"), keyHint("Ctrl+K", "browse actions")}, "\n")
 	}
-	s := m.statuses[p.ID]
 	lines := []string{titleStyle.Render(fit(oneLine(p.Name), width)), muted.Render(fit(shortPath(p.Path), width)), ""}
-	if len(p.Stack) > 0 {
-		lines = append(lines, muted.Render(fit(strings.Join(p.Stack, " · "), width)), "")
-	}
-	label := func(name, value string) string {
-		return muted.Render(pad(name, min(14, width/3))) + textStyle.Render(fit(oneLine(value), max(1, width-min(14, width/3))))
-	}
-	lines = append(lines, m.addonMetadataDetails(p, width)...)
-	repo := p.GitHub
-	if repo == "" {
-		repo = s.GitHub
-	}
-	if repo != "" {
-		lines = append(lines, highlight.Render("GITHUB"), textStyle.Render(fit(oneLine(repo), width)), "")
-	}
-	if s.Repository {
-		state := good.Render("○ clean")
-		if s.Dirty() {
-			state = warning.Render("● changes")
-		}
-		lines = append(lines, label("Branch", s.Branch), label("Status", "")+state, label("Modified", fmt.Sprint(s.Modified)), label("Untracked", fmt.Sprint(s.Untracked)), label("Ahead / back", fmt.Sprintf("↑ %d   ↓ %d", s.Ahead, s.Behind)), "")
-		if s.Commit != "" {
-			lines = append(lines, muted.Render("LAST COMMIT"), fit(oneLine(s.Commit), width), muted.Render(relativeTime(s.CommitTime)), "")
-		}
-		if s.Remote != "" && repo == "" {
-			lines = append(lines, label("Remote", s.Remote))
-		}
-	} else if m.loading[p.ID] {
-		lines = append(lines, m.spin.View()+muted.Render(" Reading Git status"), "")
-	} else {
-		lines = append(lines, muted.Render("No Git repository detected."), "")
-	}
-	if s.Error != "" {
-		lines = append(lines, fit(warning.Render(s.Error), width))
-	}
-	if m.projectFull {
-		commands := m.visibleCommands(p)
-		if len(commands) > 0 {
-			lines = append(lines, highlight.Render("COMMANDS"))
-			for _, name := range detect.CommandNames(commands) {
-				lines = append(lines, fit(textStyle.Render(name)+muted.Render("  "+oneLine(commands[name])), width))
-			}
-			lines = append(lines, "")
-		}
-	}
+	lines = append(lines, m.projectDetailSections(p, width)...)
 	// Keep the action hints anchored below the details at every terminal size.
 	hints := m.projectHints(p, width)
 	space := max(2, height-len(hints)-1)
