@@ -23,7 +23,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case addonUpdatedMsg:
 		return m, m.acceptAddonUpdate(msg)
 	case releaseMsg:
-		if msg.err == nil {
+		if msg.err == nil && msg.version != m.dismissedRelease {
 			m.latestRelease = msg.version
 		}
 	case updatedMsg:
@@ -31,6 +31,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.err != nil {
 			return m, m.notify("Update failed", msg.err)
 		}
+		m.dismissedRelease = m.latestRelease
 		m.latestRelease = ""
 		return m, m.notify("Updated. Restart Rian to use the new version.", nil)
 	case tea.WindowSizeMsg:
@@ -239,6 +240,10 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tickMsg:
 		m.autoAddBlink = !m.autoAddBlink
 		cmds := []tea.Cmd{tick(), m.scanAutoAdd(), m.checkAddonUpdates(), m.refreshAddonMetadata()}
+		if !m.updating && time.Since(m.lastReleaseCheck) >= time.Hour {
+			m.lastReleaseCheck = time.Now()
+			cmds = append(cmds, checkRelease(m.version))
+		}
 		if m.mode == gitOutput && m.gitRunning && m.gitJobStarted {
 			cmds = append(cmds, m.gitProgress(gitRunMsg{job: m.gitJobID, state: m.manager.Snapshot(m.gitJobID)}))
 		}

@@ -40,13 +40,14 @@
   ],
   "scripts": {
     "build": "node scripts/build-binaries.cjs",
-    "test": "node --test test/npm/build.test.cjs test/npm/launcher.test.cjs test/npm/release.test.cjs",
+    "test": "node --test test/npm/build.test.cjs test/npm/launcher.test.cjs test/npm/release.test.cjs test/npm/distribution.test.cjs",
     "test:package": "node --test test/npm/package.test.cjs",
     "test:install": "node scripts/check-install.cjs",
     "check:package": "node scripts/check-package.cjs",
     "postinstall": "node scripts/ensure-binary.cjs",
     "prepack": "npm run check:package",
-    "prepublishOnly": "npm test && npm run test:package"
+    "prepublishOnly": "npm test && npm run test:package",
+    "package:release": "node scripts/package-release.cjs"
   },
   "keywords": [
     "rian",

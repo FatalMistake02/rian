@@ -28,3 +28,5 @@ npm pack
 The build creates macOS, Linux, and Windows ARM64/x64 executables under `dist/binaries/`. The install check requires util-linux's `script` command on Linux. To test an existing tarball, use `npm run test:install -- /path/to/package.tgz`.
 
 Go licenses are read from `GOROOT/LICENSE` or the versioned Debian package notice automatically. For other layouts, use `RIAN_GO_LICENSE_FILE=/path/to/LICENSE npm run build`.
+
+`npm run package:release` creates standalone archives, checksums, the curl installer, and a Homebrew formula in `dist/release/`. Packaging requires `tar` and `zip` on Linux/macOS. Run `node --test test/npm/install.test.cjs` after packaging to check the installer. With Bun available, `node scripts/check-bun.cjs` checks its global installation and update detection.

@@ -73,7 +73,7 @@ function build() {
     const file = path.join(output, relative);
     fs.mkdirSync(path.dirname(file), { recursive: true });
     console.log(`Building Rian ${pkg.version} for ${target.key}…`);
-    runGo(['build', '-trimpath', '-buildvcs=false', '-ldflags', `-s -w -X main.version=${pkg.version}`, '-o', file, './cmd/rian'],
+    runGo(['build', '-trimpath', '-buildvcs=false', '-ldflags', `-s -w -X main.version=${pkg.version} -X rian/internal/updates.distribution=standalone`, '-o', file, './cmd/rian'],
       { GOOS: target.goos, GOARCH: target.goarch, CGO_ENABLED: '0' });
     fs.chmodSync(file, 0o755);
     manifest.targets[target.key] = { file: relative, sha256: crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex') };

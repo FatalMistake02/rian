@@ -100,6 +100,16 @@ function checkInstall(tarball) {
     const version = run(process.execPath, [path.join(installed, 'bin', 'rian.cjs'), '--version'], temporary).trim();
     if (version !== `rian ${manifest.version}`) throw new Error('The installed npm launcher returned an incorrect version');
     checkDesktopSetup(installed, temporary, env, manifest.version);
+    const localInfo = JSON.parse(run(binaryPath(installed), ['--installation'], temporary));
+    if (localInfo.method !== 'package') throw new Error('Local npm install must not update a global installation');
+    const globalPrefix = path.join(temporary, 'global');
+    env.npm_config_prefix = globalPrefix;
+    npm(['install', '-g', '--offline', '--no-audit', '--no-fund', '--ignore-scripts', tarball]);
+    const globalRoot = npm(['root', '-g']).trim();
+    const globalBinary = binaryPath(path.join(globalRoot, pkg.name));
+    const globalInfo = JSON.parse(run(globalBinary, ['--installation'], temporary));
+    if (globalInfo.method !== 'npm') throw new Error(`Global npm install detected as ${globalInfo.method}`);
+    console.log('Local/global npm update ownership verified.');
     console.log(`Rian ${manifest.version}: packed installation, postinstall, and launcher verified.`);
   } finally {
     fs.rmSync(temporary, { recursive: true, force: true });

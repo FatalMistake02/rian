@@ -24,15 +24,59 @@ import (
 	"rian/internal/project"
 	"rian/internal/tools"
 	"rian/internal/ui"
+	"rian/internal/updates"
 )
 
 func Run(args []string, in *os.File, out io.Writer, version string) error {
+	if len(args) == 1 && args[0] == "--installation" {
+		i, err := updates.Detect()
+		if err != nil {
+			return err
+		}
+		return json.NewEncoder(out).Encode(i)
+	}
 	if len(args) > 0 && (args[0] == "--version" || args[0] == "version") {
 		fmt.Fprintln(out, "rian "+version)
 		return nil
 	}
 	if len(args) > 0 && (args[0] == "--help" || args[0] == "-h" || args[0] == "help") {
 		fmt.Fprint(out, usage)
+		return nil
+	}
+	if len(args) > 0 && (args[0] == "--update-standalone" || args[0] == "--update-homebrew") {
+		if len(args) != 2 {
+			return fmt.Errorf("missing update version")
+		}
+		if args[0] == "--update-homebrew" {
+			return updates.UpdateHomebrew(args[1])
+		}
+		return updates.UpdateStandalone(args[1])
+	}
+	if len(args) > 0 && args[0] == "update" {
+		if len(args) > 2 || len(args) == 2 && args[1] != "--check" {
+			return fmt.Errorf("usage: rian update [--check]")
+		}
+		latest, err := updates.Check(version)
+		if err != nil {
+			return err
+		}
+		if latest == "" {
+			fmt.Fprintln(out, "Rian is up to date.")
+			return nil
+		}
+		if len(args) == 2 {
+			fmt.Fprintln(out, "Rian "+latest+" is available.")
+			return nil
+		}
+		cmd, err := updates.Command(latest)
+		if err != nil {
+			return err
+		}
+		cmd.Stdin, cmd.Stdout, cmd.Stderr = in, out, out
+		if err := cmd.Run(); err != nil {
+			return err
+		}
+		fmt.Fprintln(out, "Updated. Restart Rian to use the new version.")
 		return nil
 	}
 	path, err := config.DefaultPath()
@@ -295,6 +339,7 @@ Usage:
   rian run <project> <command>  Run a detected or custom command
   rian remove <project> [--yes] Remove only the Rian entry
   rian config                  Print the configuration path
+  rian update [--check]        Update Rian or check for a release
   rian --version               Show version
 
 Projects accept a name, ID, or unambiguous fuzzy match. Quote names with spaces.

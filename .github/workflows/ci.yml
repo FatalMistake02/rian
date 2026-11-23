@@ -58,3 +58,10 @@ jobs:
         run: npm run test:package
       - name: Test packed installation
         run: npm run test:install
+      - name: Package standalone downloads
+        run: npm run package:release
+      - name: Test standalone installer
+        run: node --test test/npm/install.test.cjs
+      - uses: oven-sh/setup-bun@v2
+      - name: Test Bun installation
+        run: node scripts/check-bun.cjs

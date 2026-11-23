@@ -24,12 +24,13 @@ func (m *Model) updateMenuKey(key string) tea.Cmd {
 	switch key {
 	case "esc":
 		m.closeModal()
-	case "up", "j":
+	case "up", "k":
 		m.menuIndex = 0
-	case "down", "k":
+	case "down", "j":
 		m.menuIndex = 1
 	case "enter":
 		if m.menuIndex == 1 {
+			m.dismissedRelease = m.latestRelease
 			m.latestRelease = ""
 			m.closeModal()
 			return nil

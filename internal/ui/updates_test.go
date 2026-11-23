@@ -26,6 +26,14 @@ func TestUpdateNoticeMenuAndDismiss(t *testing.T) {
 	if m.latestRelease != "" || m.mode != home {
 		t.Fatal("dismiss did not clear notice")
 	}
+	m.Update(releaseMsg{version: "0.3.0"})
+	if m.latestRelease != "" {
+		t.Fatal("periodic check restored a dismissed release")
+	}
+	m.Update(releaseMsg{version: "0.3.1"})
+	if m.latestRelease != "0.3.1" {
+		t.Fatal("dismissal hid a newer release")
+	}
 }
 func TestUpdateKeyDoesNotInterruptSearch(t *testing.T) {
 	m := fixture(t)

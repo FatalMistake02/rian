@@ -66,7 +66,8 @@ type formField struct {
 
 type Model struct {
 	addonMetadata                                      map[string]addonMetadataState
-	version, latestRelease                             string
+	version, latestRelease, dismissedRelease           string
+	lastReleaseCheck                                   time.Time
 	updating                                           bool
 	addonUpdatesAvailable                              map[string]addonUpdate
 	addonUpdatesChecked                                map[string]addonUpdateCheckState
@@ -221,12 +222,13 @@ func New(store *config.Store, manager *process.Manager, logger *log.Logger, vers
 	var choice [1]byte
 	_, _ = rand.Read(choice[:])
 	randomAccent := config.AccentColors[int(choice[0])%(len(config.AccentColors)-1)]
-	return &Model{version: version, overview: true, randomAccent: randomAccent, startupDir: startupDir, store: store, manager: manager, logger: logger, search: input("Search projects"), query: input(""),
+	return &Model{version: version, lastReleaseCheck: time.Now(), overview: true, randomAccent: randomAccent, startupDir: startupDir, store: store, manager: manager, logger: logger, search: input("Search projects"), query: input(""),
 		spin: s, viewport: vp,
 		statuses: map[string]git.Status{}, loading: map[string]bool{}, lastRefresh: map[string]time.Time{}, available: map[string]bool{}, followOutput: true}
 }
 
 func (m *Model) Init() tea.Cmd {
+	m.lastReleaseCheck = time.Now()
 	store := m.store
 	return tea.Batch(func() tea.Msg {
 		cfg, err := store.Update(func(*config.Config) error { return nil })

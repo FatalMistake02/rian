@@ -1,16 +1,12 @@
-// Package updates checks the public npm release and updates global npm installs.
+// Package updates checks releases and updates the installation that is running.
 package updates
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
-	"os"
-	"os/exec"
-	"path/filepath"
-	"rian/internal/project"
-	"rian/internal/tools"
 	"strconv"
 	"strings"
 	"time"
@@ -58,51 +54,39 @@ func Newer(latest, current string) bool {
 	return false
 }
 func Check(current string) (string, error) {
-	client := &http.Client{Timeout: 8 * time.Second}
-	resp, err := client.Get("https://registry.npmjs.org/@fatalmistake02%2frian/latest")
+	return check(current, http.DefaultClient, releaseEndpoint())
+}
+
+func check(current string, client *http.Client, endpoint string) (string, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 8*time.Second)
+	defer cancel()
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
+	if err != nil {
+		return "", err
+	}
+	resp, err := client.Do(req)
 	if err != nil {
 		return "", err
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("npm registry: %s", resp.Status)
+		return "", fmt.Errorf("release check: %s", resp.Status)
 	}
 	var release struct {
 		Version string `json:"version"`
+		Tag     string `json:"tag_name"`
 	}
 	if err := json.NewDecoder(io.LimitReader(resp.Body, 1<<20)).Decode(&release); err != nil {
 		return "", err
+	}
+	if release.Version == "" {
+		release.Version = strings.TrimPrefix(release.Tag, "v")
+	}
+	if _, valid := parts(release.Version); !valid {
+		return "", fmt.Errorf("invalid release version")
 	}
 	if Newer(release.Version, current) {
 		return release.Version, nil
 	}
 	return "", nil
-}
-
-// Command refuses to update a different installation than the running executable.
-func Command(version string) (*exec.Cmd, error) {
-	if _, ok := parts(version); !ok {
-		return nil, fmt.Errorf("invalid release version")
-	}
-	exe, err := os.Executable()
-	if err != nil {
-		return nil, err
-	}
-	exe, err = filepath.EvalSymlinks(exe)
-	if err != nil {
-		return nil, err
-	}
-	rootCmd, err := tools.ExternalCommand(project.Project{Path: os.TempDir()}, "npm", "root", "-g")
-	if err != nil {
-		return nil, err
-	}
-	output, err := rootCmd.Output()
-	if err != nil {
-		return nil, fmt.Errorf("npm is unavailable; update with npm install -g %s@%s", Package, version)
-	}
-	root, err := filepath.EvalSymlinks(filepath.Join(strings.TrimSpace(string(output)), "@fatalmistake02", "rian"))
-	if err != nil || !strings.HasPrefix(exe, root+string(os.PathSeparator)+"dist"+string(os.PathSeparator)+"binaries"+string(os.PathSeparator)) {
-		return nil, fmt.Errorf("this is not the active global npm installation; update your installation manually with npm install -g %s@%s", Package, version)
-	}
-	return tools.ExternalCommand(project.Project{Path: os.TempDir()}, "npm", "install", "-g", Package+"@"+version)
 }
